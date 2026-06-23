@@ -2,12 +2,11 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DermaScan — Sistem Pakar</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>SkinCheck — Sistem Pakar Penyakit Kulit + Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.min.js"></script>
     <style>
         .admin-login, .admin-panel { background: var(--white); border-radius: var(--radius-lg); padding: 2rem; max-width: 500px; margin: 0 auto; }
         .admin-panel { max-width: 1000px; }
@@ -23,6 +22,25 @@
         .form-group label { display: block; font-weight: 600; margin-bottom: 4px; }
         .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px; border-radius: 12px; border: 1px solid var(--border); font-family: inherit; }
         .toast-msg { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 8px 20px; border-radius: 40px; font-size: 0.8rem; z-index: 1100; opacity: 0; transition: 0.2s; pointer-events: none; }
+        .result-card { background: linear-gradient(115deg, #fafdff, #ffffff); border-radius: var(--radius-lg); padding: 1.6rem; margin-top: 1.5rem; border-left: 6px solid var(--teal); box-shadow: var(--shadow-sm); }
+        .match-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .match-item:last-child { border-bottom: none; }
+        .match-item .icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--blue-light); }
+        /* Modal detail penyakit - fokus pada gejala */
+        .detail-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+        .detail-header .icon-big { font-size: 2.5rem; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; background: var(--blue-light); border-radius: 20px; }
+        .detail-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+        .detail-meta .badge { background: var(--blue-light); padding: 4px 12px; border-radius: 40px; font-size: 0.75rem; font-weight: 600; }
+        .detail-meta .badge.severity { background: #fff0db; color: #b45f06; }
+        .symptom-list { background: var(--blue-light); border-radius: 20px; padding: 16px; margin: 12px 0; }
+        .symptom-list ul { list-style: none; padding: 0; margin: 8px 0 0 0; }
+        .symptom-list li { padding: 6px 0; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .symptom-list li:last-child { border-bottom: none; }
+        .symptom-list li i { color: var(--blue); width: 20px; text-align: center; }
+        .detail-section { margin: 12px 0; }
+        .detail-section strong { color: var(--ink-2); display: block; margin-bottom: 4px; font-size: 0.85rem; }
+        .detail-section p { font-size: 0.9rem; margin: 0; }
+        .detail-section .info-box { background: var(--surface); border-radius: 16px; padding: 12px; }
     </style>
 </head>
 <body>
@@ -31,8 +49,8 @@
         <div class="logo-area">
             <div class="logo-icon"><i class="fas fa-hand-holding-medical"></i></div>
             <div class="logo-text">
-                <h1>Derma<span style="color:#1a6fd4;">Scan</span></h1>
-                <small>Sistem Pakar | Data dari Spreadsheet</small>
+                <h1>Skin<span style="color:#1a6fd4;">Check</span></h1>
+                <small>Sistem Pakar + Admin Panel | Data dari Spreadsheet</small>
             </div>
         </div>
         <div class="header-badge">
@@ -44,7 +62,6 @@
     <div class="nav-wrap">
         <button class="nav-btn active" data-page="home"><i class="fas fa-house"></i> Beranda</button>
         <button class="nav-btn" data-page="symptoms"><i class="fas fa-stethoscope"></i> Deteksi Gejala</button>
-        <button class="nav-btn" data-page="imagescan"><i class="fas fa-camera"></i> Scan Gambar</button>
         <button class="nav-btn" data-page="education"><i class="fas fa-graduation-cap"></i> Edukasi</button>
         <button class="nav-btn" data-page="history"><i class="fas fa-clock-rotate-left"></i> Riwayat</button>
     </div>
@@ -52,7 +69,7 @@
     <main id="main-content"></main>
     <footer>
         <p><i class="fas fa-triangle-exclamation"></i> Hasil deteksi tidak menggantikan diagnosis dokter. Konsultasikan ke tenaga medis profesional.</p>
-        <p>© 2025 DermaScan — Data penyakit dikelola via Admin Panel | Spreadsheet terintegrasi</p>
+        <p>© 2025 SkinCheck — Data penyakit dikelola via Admin Panel | Spreadsheet terintegrasi</p>
     </footer>
     <div id="toastMsg" class="toast-msg"></div>
 </div>
@@ -92,18 +109,18 @@
     // ---------- DATA LOKAL (FALLBACK) ----------
     function getLocalDiseases() {
         return [
-            { id:1, name:"Panu", latin:"Tinea versicolor", category:"Jamur", severity:"Ringan", iconClass:"fas fa-circle-dot", iconColor:"#D97706", colorMatch:["#F5DEB3","#D2B48C"], symptoms:["Bercak putih atau coklat di badan","Sisik halus","Gatal ringan"], solution:"Sabun antijamur ketoconazole 2%", prevention:"Mandi setelah berkeringat", warnDokter:"Jika menyebar luas", description:"Infeksi jamur Malassezia", cause:"Cuaca panas, lembab", longTermImpact:"Perubahan warna kulit", complications:"Hiperpigmentasi" },
-            { id:2, name:"Kurap", latin:"Tinea corporis", category:"Jamur", severity:"Ringan–Sedang", iconClass:"fas fa-circle-notch", iconColor:"#D94A4A", colorMatch:["#E6B8A2","#CD5C5C"], symptoms:["Ruam lingkaran cincin","Tepi merah meninggi","Gatal sedang"], solution:"Krim antijamur miconazole", prevention:"Jangan berbagi handuk", warnDokter:"Ruam ke wajah", description:"Infeksi dermatofita", cause:"Kontak hewan/tanah", longTermImpact:"Penyebaran luas", complications:"Selulitis" },
-            { id:3, name:"Eksim", latin:"Dermatitis atopik", category:"Alergi", severity:"Sedang–Berat", iconClass:"fas fa-droplet", iconColor:"#2E7EB8", colorMatch:["#E07A5F","#D98880"], symptoms:["Kulit kering kasar","Gatal hebat malam","Kemerahan lipatan"], solution:"Pelembab, kortikosteroid", prevention:"Hindari sabun keras", warnDokter:"Infeksi bernanah", description:"Peradangan kronis", cause:"Genetik + alergen", longTermImpact:"Kulit menebal", complications:"Infeksi herpes" },
-            { id:4, name:"Psoriasis", latin:"Psoriasis vulgaris", category:"Autoimun", severity:"Sedang–Berat", iconClass:"fas fa-layer-group", iconColor:"#8B5CF6", colorMatch:["#E6C2A5","#D4A373"], symptoms:["Bercak tebal bersisik perak","Sisik lepas","Kuku bopeng"], solution:"Kortikosteroid, fototerapi", prevention:"Kelola stres", warnDokter:"Sendi bengkak", description:"Autoimun", cause:"Gangguan imun", longTermImpact:"Artritis psoriatik", complications:"Eritrodermik" },
-            { id:5, name:"Dermatitis Kontak", latin:"Contact dermatitis", category:"Alergi/Iritasi", severity:"Ringan–Sedang", iconClass:"fas fa-hand-dots", iconColor:"#E07A5F", colorMatch:["#F5B7B1","#E74C3C"], symptoms:["Kemerahan area kontak","Lepuhan kecil","Bengkak"], solution:"Bilas air, kompres dingin", prevention:"Hindari alergen", warnDokter:"Sesak napas", description:"Reaksi iritasi", cause:"Bahan kimia", longTermImpact:"Kulit menebal", complications:"Infeksi" },
-            { id:6, name:"Kudis", latin:"Scabies", category:"Parasit", severity:"Sedang", iconClass:"fas fa-bug", iconColor:"#2D6A4F", colorMatch:["#B3A369","#7D6B46"], symptoms:["Gatal luar biasa malam","Terowongan abu-abu","Bintil sela jari"], solution:"Krim permethrin 5%", prevention:"Hindari kontak langsung", warnDokter:"Tidak membaik 2 siklus", description:"Infestasi tungau", cause:"Kontak kulit", longTermImpact:"Pruritus berkepanjangan", complications:"Selulitis" },
-            { id:7, name:"Folikulitis", latin:"Folliculitis", category:"Bakteri", severity:"Ringan", iconClass:"fas fa-circle-exclamation", iconColor:"#E85D04", colorMatch:["#F1948A","#E74C3C"], symptoms:["Benjolan merah di folikel","Berisi nanah","Nyeri tekan"], solution:"Kompres hangat, sabun antibakteri", prevention:"Mandi setelah olahraga", warnDokter:"Bisul besar", description:"Infeksi folikel", cause:"Staphylococcus", longTermImpact:"Sikatrik", complications:"Furunkel" },
-            { id:8, name:"Campak", latin:"Measles", category:"Virus", severity:"Berat", iconClass:"fas fa-virus", iconColor:"#D9534F", colorMatch:["#E6B0AA","#D98880"], symptoms:["Demam tinggi","Batuk pilek","Ruam merah"], solution:"Istirahat, vitamin A", prevention:"Vaksin MMR", warnDokter:"Segera IGD", description:"Infeksi paramyxovirus", cause:"Droplet", longTermImpact:"Komplikasi berat", complications:"Pneumonia" },
-            { id:9, name:"Kutil", latin:"Verruca vulgaris", category:"Virus", severity:"Ringan", iconClass:"fas fa-thumbtack", iconColor:"#7F5539", colorMatch:["#C2B280","#A68A56"], symptoms:["Benjolan kasar","Titik hitam"], solution:"Asam salisilat", prevention:"Jangan sentuh kutil", warnDokter:"Area genital", description:"HPV", cause:"Kontak langsung", longTermImpact:"Menetap", complications:"Kutil plantar" },
-            { id:10, name:"Impetigo", latin:"Impetigo contagiosa", category:"Bakteri", severity:"Ringan–Sedang", iconClass:"fas fa-shield-virus", iconColor:"#E6A017", colorMatch:["#F7DC6F","#F1C40F"], symptoms:["Lepuhan kerak kuning","Gatal ringan"], solution:"Mupirocin topikal", prevention:"Cuci tangan", warnDokter:"Demam tinggi", description:"Infeksi dangkal", cause:"Staphylococcus", longTermImpact:"Glomerulonefritis", complications:"Selulitis" },
-            { id:11, name:"Herpes Zoster", latin:"Herpes zoster", category:"Virus", severity:"Sedang–Berat", iconClass:"fas fa-bolt", iconColor:"#9B59B6", colorMatch:["#D7BDE2","#C39BD3"], symptoms:["Nyeri terbakar","Ruam melepuh satu sisi"], solution:"Antivirus asiklovir", prevention:"Vaksin Shingrix", warnDokter:"Ruam dekat mata", description:"Reaktivasi varicella", cause:"Imun menurun", longTermImpact:"Neuralgia pasca-herpes", complications:"Kerusakan kornea" },
-            { id:12, name:"Biang Keringat", latin:"Miliaria rubra", category:"Kelenjar Keringat", severity:"Ringan", iconClass:"fas fa-temperature-high", iconColor:"#E07A5F", colorMatch:["#FADBD8","#F1948A"], symptoms:["Bintik merah kecil","Rasa perih"], solution:"Mandi air dingin, bedak kalamin", prevention:"Pakaian katun", warnDokter:"Demam tinggi", description:"Tersumbat keringat", cause:"Panas lembab", longTermImpact:"Miliaria profunda", complications:"Infeksi" }
+            { id:1, name:"Panu", latin:"Tinea versicolor", category:"Jamur", severity:"Ringan", iconClass:"fas fa-circle-dot", iconColor:"#D97706", symptoms:["Bercak putih atau coklat di badan","Sisik halus","Gatal ringan"], solution:"Sabun antijamur ketoconazole 2%", prevention:"Mandi setelah berkeringat", warnDokter:"Jika menyebar luas", description:"Infeksi jamur Malassezia", cause:"Cuaca panas, lembab", longTermImpact:"Perubahan warna kulit", complications:"Hiperpigmentasi" },
+            { id:2, name:"Kurap", latin:"Tinea corporis", category:"Jamur", severity:"Ringan–Sedang", iconClass:"fas fa-circle-notch", iconColor:"#D94A4A", symptoms:["Ruam lingkaran cincin","Tepi merah meninggi","Gatal sedang"], solution:"Krim antijamur miconazole", prevention:"Jangan berbagi handuk", warnDokter:"Ruam ke wajah", description:"Infeksi dermatofita", cause:"Kontak hewan/tanah", longTermImpact:"Penyebaran luas", complications:"Selulitis" },
+            { id:3, name:"Eksim", latin:"Dermatitis atopik", category:"Alergi", severity:"Sedang–Berat", iconClass:"fas fa-droplet", iconColor:"#2E7EB8", symptoms:["Kulit kering kasar","Gatal hebat malam","Kemerahan lipatan"], solution:"Pelembab, kortikosteroid", prevention:"Hindari sabun keras", warnDokter:"Infeksi bernanah", description:"Peradangan kronis", cause:"Genetik + alergen", longTermImpact:"Kulit menebal", complications:"Infeksi herpes" },
+            { id:4, name:"Psoriasis", latin:"Psoriasis vulgaris", category:"Autoimun", severity:"Sedang–Berat", iconClass:"fas fa-layer-group", iconColor:"#8B5CF6", symptoms:["Bercak tebal bersisik perak","Sisik lepas","Kuku bopeng"], solution:"Kortikosteroid, fototerapi", prevention:"Kelola stres", warnDokter:"Sendi bengkak", description:"Autoimun", cause:"Gangguan imun", longTermImpact:"Artritis psoriatik", complications:"Eritrodermik" },
+            { id:5, name:"Dermatitis Kontak", latin:"Contact dermatitis", category:"Alergi/Iritasi", severity:"Ringan–Sedang", iconClass:"fas fa-hand-dots", iconColor:"#E07A5F", symptoms:["Kemerahan area kontak","Lepuhan kecil","Bengkak"], solution:"Bilas air, kompres dingin", prevention:"Hindari alergen", warnDokter:"Sesak napas", description:"Reaksi iritasi", cause:"Bahan kimia", longTermImpact:"Kulit menebal", complications:"Infeksi" },
+            { id:6, name:"Kudis", latin:"Scabies", category:"Parasit", severity:"Sedang", iconClass:"fas fa-bug", iconColor:"#2D6A4F", symptoms:["Gatal luar biasa malam","Terowongan abu-abu","Bintil sela jari"], solution:"Krim permethrin 5%", prevention:"Hindari kontak langsung", warnDokter:"Tidak membaik 2 siklus", description:"Infestasi tungau", cause:"Kontak kulit", longTermImpact:"Pruritus berkepanjangan", complications:"Selulitis" },
+            { id:7, name:"Folikulitis", latin:"Folliculitis", category:"Bakteri", severity:"Ringan", iconClass:"fas fa-circle-exclamation", iconColor:"#E85D04", symptoms:["Benjolan merah di folikel","Berisi nanah","Nyeri tekan"], solution:"Kompres hangat, sabun antibakteri", prevention:"Mandi setelah olahraga", warnDokter:"Bisul besar", description:"Infeksi folikel", cause:"Staphylococcus", longTermImpact:"Sikatrik", complications:"Furunkel" },
+            { id:8, name:"Campak", latin:"Measles", category:"Virus", severity:"Berat", iconClass:"fas fa-virus", iconColor:"#D9534F", symptoms:["Demam tinggi","Batuk pilek","Ruam merah"], solution:"Istirahat, vitamin A", prevention:"Vaksin MMR", warnDokter:"Segera IGD", description:"Infeksi paramyxovirus", cause:"Droplet", longTermImpact:"Komplikasi berat", complications:"Pneumonia" },
+            { id:9, name:"Kutil", latin:"Verruca vulgaris", category:"Virus", severity:"Ringan", iconClass:"fas fa-thumbtack", iconColor:"#7F5539", symptoms:["Benjolan kasar","Titik hitam"], solution:"Asam salisilat", prevention:"Jangan sentuh kutil", warnDokter:"Area genital", description:"HPV", cause:"Kontak langsung", longTermImpact:"Menetap", complications:"Kutil plantar" },
+            { id:10, name:"Impetigo", latin:"Impetigo contagiosa", category:"Bakteri", severity:"Ringan–Sedang", iconClass:"fas fa-shield-virus", iconColor:"#E6A017", symptoms:["Lepuhan kerak kuning","Gatal ringan"], solution:"Mupirocin topikal", prevention:"Cuci tangan", warnDokter:"Demam tinggi", description:"Infeksi dangkal", cause:"Staphylococcus", longTermImpact:"Glomerulonefritis", complications:"Selulitis" },
+            { id:11, name:"Herpes Zoster", latin:"Herpes zoster", category:"Virus", severity:"Sedang–Berat", iconClass:"fas fa-bolt", iconColor:"#9B59B6", symptoms:["Nyeri terbakar","Ruam melepuh satu sisi"], solution:"Antivirus asiklovir", prevention:"Vaksin Shingrix", warnDokter:"Ruam dekat mata", description:"Reaktivasi varicella", cause:"Imun menurun", longTermImpact:"Neuralgia pasca-herpes", complications:"Kerusakan kornea" },
+            { id:12, name:"Biang Keringat", latin:"Miliaria rubra", category:"Kelenjar Keringat", severity:"Ringan", iconClass:"fas fa-temperature-high", iconColor:"#E07A5F", symptoms:["Bintik merah kecil","Rasa perih"], solution:"Mandi air dingin, bedak kalamin", prevention:"Pakaian katun", warnDokter:"Demam tinggi", description:"Tersumbat keringat", cause:"Panas lembab", longTermImpact:"Miliaria profunda", complications:"Infeksi" }
         ];
     }
 
@@ -181,46 +198,16 @@
         setTimeout(() => toast.style.opacity = '0', 3000);
     }
 
-    function getConfBadge(conf) {
-        if(conf>=70) return {cls:'high', label:`${conf}% · Keyakinan Tinggi`};
-        if(conf>=40) return {cls:'mid', label:`${conf}% · Sedang`};
-        return {cls:'low', label:`${conf}% · Rendah`};
-    }
-
-    function getClosestDiseaseByColor(rgb) {
-        let minDistance = Infinity;
-        let closest = null;
-        for (const disease of diseases) {
-            let minDiseaseDist = Infinity;
-            for (const refColor of (disease.colorMatch || [])) {
-                let r2,g2,b2;
-                if (refColor.startsWith('#')) {
-                    r2 = parseInt(refColor.slice(1,3),16);
-                    g2 = parseInt(refColor.slice(3,5),16);
-                    b2 = parseInt(refColor.slice(5,7),16);
-                } else { r2=g2=b2=128; }
-                const dist = Math.sqrt((rgb[0]-r2)**2 + (rgb[1]-g2)**2 + (rgb[2]-b2)**2);
-                if(dist < minDiseaseDist) minDiseaseDist = dist;
-            }
-            if(minDiseaseDist < minDistance) {
-                minDistance = minDiseaseDist;
-                closest = disease;
-            }
-        }
-        let confidence = Math.max(20, Math.min(95, Math.round(100 - (minDistance / 3))));
-        return { disease: closest, confidence };
-    }
-
     // ---------- Riwayat (localStorage) ----------
     function loadHistoryLocal() {
-        const s = localStorage.getItem('dermascan_history');
+        const s = localStorage.getItem('skincheck_history');
         if(s) historyData = JSON.parse(s);
         else historyData = [];
     }
     function saveHistoryLocal(rec) {
         historyData.unshift(rec);
         if(historyData.length>50) historyData.pop();
-        localStorage.setItem('dermascan_history', JSON.stringify(historyData));
+        localStorage.setItem('skincheck_history', JSON.stringify(historyData));
     }
     function saveHistory(rec) {
         saveHistoryLocal(rec);
@@ -233,7 +220,6 @@
     function renderCurrentPage() {
         if(currentPage === 'home') renderHome();
         else if(currentPage === 'symptoms') renderSymptoms();
-        else if(currentPage === 'imagescan') renderImageScan();
         else if(currentPage === 'education') renderEducation();
         else if(currentPage === 'history') renderHistory();
     }
@@ -252,25 +238,24 @@
                 <div style="margin-top: 10px; font-size:0.75rem;"><strong>Gejala:</strong> ${d.symptoms.slice(0,3).join(', ')}${d.symptoms.length>3?'...':''}</div>
             </div>
         `).join('');
-        const latest = historyData.slice(0,3).map(h => `<div class="history-item"><b>${h.disease}</b> · ${h.confidence}% · ${h.date}</div>`).join('') || '<div>Belum ada riwayat deteksi</div>';
+        const latest = historyData.slice(0,3).map(h => `<div class="history-item"><b>${h.disease}</b> · ${h.date}</div>`).join('') || '<div>Belum ada riwayat deteksi</div>';
         mainContent.innerHTML = `
             <div class="hero">
-                <h2>Deteksi Awal Penyakit Kulit<br>Berdasarkan Gejala atau Gambar</h2>
-                <p>Sistem pakar dengan ${diseases.length} penyakit kulit, data dikelola via admin panel.</p>
+                <h2>Deteksi Penyakit Kulit<br>Berdasarkan Gejala</h2>
+                <p>Sistem pakar dengan ${diseases.length} penyakit kulit. Pilih gejala, sistem akan menyaring penyakit yang cocok.</p>
                 <div style="display:flex; gap:12px; margin-top:1.2rem;">
                     <button id="homeSymBtn" class="btn" style="background:white; color:#1a6fd4;"><i class="fas fa-stethoscope"></i> Deteksi Gejala</button>
-                    <button id="homeScanBtn" class="btn-outline" style="background:rgba(255,255,255,0.2); color:white; border-color:white;"><i class="fas fa-camera"></i> Scan Gambar</button>
                 </div>
             </div>
-            <div class="card"><div class="card-title"><i class="fas fa-info-circle"></i> Tentang DermaScan</div><p>Aplikasi deteksi dini penyakit kulit. Admin dapat mengelola data penyakit tanpa coding.</p></div>
+            <div class="card"><div class="card-title"><i class="fas fa-info-circle"></i> Tentang SkinCheck</div><p>Aplikasi deteksi dini penyakit kulit. Admin dapat mengelola data penyakit tanpa coding.</p></div>
             <div class="card"><div class="card-title"><i class="fas fa-list-ul"></i> Daftar Penyakit Kulit (${diseases.length})</div><div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem;">${diseaseListHtml}</div></div>
             <div class="card"><div class="card-title"><i class="fas fa-clock-rotate-left"></i> Riwayat Terbaru</div><div id="latestHistory">${latest}</div><button id="lihatSemuaBtn" class="btn-outline" style="margin-top:1rem;">Lihat Semua Riwayat</button></div>
         `;
         document.getElementById('homeSymBtn')?.addEventListener('click',()=>changePage('symptoms'));
-        document.getElementById('homeScanBtn')?.addEventListener('click',()=>changePage('imagescan'));
         document.getElementById('lihatSemuaBtn')?.addEventListener('click',()=>changePage('history'));
     }
 
+    // ---------- DETEKSI GEJALA (SISTEM FILTER) ----------
     function renderSymptoms() {
         if(diseases.length === 0) { mainContent.innerHTML = `<div class="card">Memuat data...</div>`; return; }
         const allSymptomsList = [...new Set(diseases.flatMap(d => d.symptoms))].sort();
@@ -281,6 +266,7 @@
                 <label for="chk_${s.replace(/\W/g,'_')}">${s}</label>
             </div>
         `).join('');
+
         mainContent.innerHTML = `
             <div class="card">
                 <div class="card-title"><i class="fas fa-stethoscope"></i> Pilih Gejala yang Anda Rasakan</div>
@@ -288,14 +274,15 @@
                 <div id="symCounter" class="sym-counter">${Object.values(selectedSymptoms).filter(v=>v).length} gejala dipilih</div>
                 <div class="symptoms-list-vertical" id="symptomContainer">${symptomsHtml}</div>
                 <div class="btn-group" style="margin-top: 1.5rem;">
-                    <button class="btn" id="diagnoseExpertBtn"><i class="fas fa-microscope"></i> Deteksi Sekarang</button>
+                    <button class="btn" id="filterBtn"><i class="fas fa-filter"></i> Filter Penyakit</button>
                     <button class="btn-outline" id="resetSymBtn"><i class="fas fa-rotate-left"></i> Reset Semua</button>
                 </div>
                 <div id="gejalaResultArea"></div>
             </div>
         `;
+
         attachSymEvents();
-        document.getElementById('diagnoseExpertBtn').addEventListener('click', expertDiagnose);
+        document.getElementById('filterBtn').addEventListener('click', filterDiseases);
         document.getElementById('resetSymBtn').addEventListener('click', () => {
             document.querySelectorAll('.symptom-row input').forEach(cb => { cb.checked = false; selectedSymptoms[cb.value] = false; });
             updateSymCounter();
@@ -308,121 +295,48 @@
         }
     }
 
-    function expertDiagnose() {
-        const userSyms = Object.keys(selectedSymptoms).filter(s=>selectedSymptoms[s]);
-        if(!userSyms.length){ document.getElementById('gejalaResultArea').innerHTML=`<div class="result-card error">⚠️ Pilih minimal satu gejala terlebih dahulu.</div>`; return; }
-        const results = diseases.map(d => {
-            const matched = d.symptoms.filter(s => userSyms.includes(s));
-            const conf = Math.round((matched.length / d.symptoms.length) * 100);
-            return { ...d, confidence: conf, matched };
-        }).sort((a,b)=>b.confidence - a.confidence);
-        const top = results[0];
-        if(top.confidence < 15) {
-            document.getElementById('gejalaResultArea').innerHTML = `<div class="result-card error">Gejala tidak cukup spesifik. Konsultasi ke dokter.</div>`;
+    // Fungsi filter: menampilkan semua penyakit yang memiliki SEMUA gejala yang dipilih
+    function filterDiseases() {
+        const userSyms = Object.keys(selectedSymptoms).filter(s => selectedSymptoms[s]);
+        const resultArea = document.getElementById('gejalaResultArea');
+        if(userSyms.length === 0) {
+            resultArea.innerHTML = `<div class="result-card error">⚠️ Pilih minimal satu gejala terlebih dahulu.</div>`;
             return;
         }
-        const badge = getConfBadge(top.confidence);
-        document.getElementById('gejalaResultArea').innerHTML = `
-            <div class="result-card">
-                <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center;">
-                    <div class="disease-icon-simple"><i class="${top.iconClass}" style="color:${top.iconColor}; font-size:2rem;"></i></div>
-                    <div><h3>${top.name}</h3><p>${top.latin}</p><span class="conf-badge">${badge.label}</span></div>
+
+        // Cari penyakit yang memiliki semua gejala yang dipilih
+        const matchedDiseases = diseases.filter(d => {
+            return userSyms.every(sym => d.symptoms.includes(sym));
+        });
+
+        if(matchedDiseases.length === 0) {
+            resultArea.innerHTML = `<div class="result-card error">Tidak ada penyakit yang cocok dengan semua gejala yang Anda pilih. Coba pilih gejala yang lebih spesifik atau konsultasikan ke dokter.</div>`;
+            return;
+        }
+
+        let html = `<div class="result-card"><h3>Penyakit yang cocok dengan gejala Anda:</h3>`;
+        matchedDiseases.forEach(d => {
+            html += `
+                <div class="match-item" onclick="openDiseaseModal(diseases.find(p=>p.id===${d.id}))" style="cursor:pointer;">
+                    <div class="icon"><i class="${d.iconClass}" style="color:${d.iconColor}; font-size:1.3rem;"></i></div>
+                    <div>
+                        <strong>${d.name}</strong> <span style="font-size:0.8rem; color:var(--muted);">(${d.latin})</span>
+                        <div style="font-size:0.75rem; color:var(--muted);">${d.category} · ${d.severity}</div>
+                    </div>
                 </div>
-                <div><strong>Kecocokan gejala:</strong> ${top.matched.length}/${top.symptoms.length}</div>
-                <div><strong>Penanganan awal:</strong> ${top.solution}</div>
-                <div><strong>Kapan ke dokter?</strong> ${top.warnDokter}</div>
-                <button id="saveExpertBtn" class="btn" style="margin-top:14px;">Simpan ke Riwayat & Spreadsheet</button>
-            </div>
-        `;
-        document.getElementById('saveExpertBtn')?.addEventListener('click',()=>{
-            const record = { id: Date.now(), date: new Date().toLocaleDateString('id'), disease: top.name, confidence: top.confidence, method: "Deteksi Gejala", symptoms: userSyms.join(", ") };
+            `;
+        });
+        html += `<button id="saveFilterResult" class="btn" style="margin-top:16px;">Simpan ke Riwayat</button></div>`;
+        resultArea.innerHTML = html;
+        document.getElementById('saveFilterResult')?.addEventListener('click', () => {
+            const names = matchedDiseases.map(d => d.name).join(', ');
+            const record = { id: Date.now(), date: new Date().toLocaleDateString('id'), disease: names, confidence: '-', method: "Filter Gejala", symptoms: userSyms.join(", ") };
             saveHistory(record);
             alert('Riwayat tersimpan!');
         });
     }
 
-    function renderImageScan() {
-        mainContent.innerHTML = `
-            <div class="card">
-                <div class="card-title"><i class="fas fa-camera"></i> Scan Gambar Kulit</div>
-                <p class="text-muted">Unggah foto area kulit yang bermasalah. Sistem akan menganalisis warna dominan.</p>
-                <div class="scan-area" id="scanDropZone">
-                    <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--blue);"></i>
-                    <p>Seret foto ke sini atau klik untuk memilih</p>
-                    <input type="file" id="scanFileInput" accept="image/*" style="display:none;">
-                    <button id="uploadScanBtn" class="btn-outline"><i class="fas fa-folder-open"></i> Pilih Gambar</button>
-                    <div id="previewWrap"></div>
-                </div>
-                <div class="btn-group">
-                    <button class="btn" id="analyzeImageBtn" disabled><i class="fas fa-microscope"></i> Analisis Gambar</button>
-                    <button class="btn-outline" id="resetScanBtn"><i class="fas fa-rotate-left"></i> Reset</button>
-                </div>
-                <div id="scanResultArea"></div>
-            </div>
-        `;
-        const fileInput = document.getElementById('scanFileInput');
-        const uploadBtn = document.getElementById('uploadScanBtn');
-        const analyzeBtn = document.getElementById('analyzeImageBtn');
-        const resetBtn = document.getElementById('resetScanBtn');
-        const previewWrap = document.getElementById('previewWrap');
-        const dropZone = document.getElementById('scanDropZone');
-        let currentImageData = null;
-
-        uploadBtn.onclick = () => fileInput.click();
-        fileInput.onchange = e => handleImage(e.target.files[0]);
-        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--blue)'; dropZone.style.background = 'var(--blue-light)'; });
-        dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; dropZone.style.background = ''; });
-        dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.style.borderColor = ''; dropZone.style.background = ''; handleImage(e.dataTransfer.files[0]); });
-        dropZone.addEventListener('click', () => fileInput.click());
-        resetBtn.onclick = () => { previewWrap.innerHTML = ''; currentImageData = null; analyzeBtn.disabled = true; document.getElementById('scanResultArea').innerHTML = ''; fileInput.value = ''; };
-
-        function handleImage(file) {
-            if(!file || !file.type.startsWith('image/')){ alert('File gambar tidak valid'); return; }
-            const reader = new FileReader();
-            reader.onload = ev => {
-                const img = new Image();
-                img.onload = () => {
-                    previewWrap.innerHTML = `<img src="${ev.target.result}" class="image-preview" alt="Preview">`;
-                    currentImageData = { imgElement: img };
-                    analyzeBtn.disabled = false;
-                };
-                img.src = ev.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        analyzeBtn.onclick = () => {
-            if(!currentImageData) return;
-            const resultArea = document.getElementById('scanResultArea');
-            resultArea.innerHTML = `<div style="text-align:center;"><div class="spinner"></div><p>Menganalisis warna...</p></div>`;
-            const img = currentImageData.imgElement;
-            const colorThief = new ColorThief();
-            setTimeout(() => {
-                try {
-                    const dominant = colorThief.getColor(img);
-                    if(dominant) {
-                        const { disease, confidence } = getClosestDiseaseByColor(dominant);
-                        const badge = getConfBadge(confidence);
-                        const rgbStr = `rgb(${dominant[0]}, ${dominant[1]}, ${dominant[2]})`;
-                        resultArea.innerHTML = `
-                            <div class="result-card">
-                                <div style="display:flex; gap:14px;"><div class="disease-icon-simple"><i class="${disease.iconClass}" style="color:${disease.iconColor}; font-size:2rem;"></i></div><div><h3>${disease.name}</h3><span class="conf-badge">${badge.label}</span></div></div>
-                                <div><strong>Warna dominan:</strong> <span style="display:inline-block; width:40px; height:20px; background:${rgbStr}; border-radius:8px;"></span> ${rgbStr}</div>
-                                <div><strong>Penanganan:</strong> ${disease.solution}</div>
-                                <button id="saveScanResult" class="btn">Simpan ke Riwayat</button>
-                            </div>
-                        `;
-                        document.getElementById('saveScanResult')?.addEventListener('click', () => {
-                            const record = { id: Date.now(), date: new Date().toLocaleDateString('id'), disease: disease.name, confidence: confidence, method: "Scan Gambar", symptoms: `Warna ${rgbStr}` };
-                            saveHistory(record);
-                            alert('Tersimpan!');
-                        });
-                    } else throw new Error();
-                } catch(e) { resultArea.innerHTML = `<div class="result-card error">Gagal analisis warna. Coba gambar lain.</div>`; }
-            }, 100);
-        };
-    }
-
+    // ===== Edukasi, Riwayat, Admin =====
     function renderEducation() {
         if(diseases.length === 0) { mainContent.innerHTML = `<div class="card">Memuat data...</div>`; return; }
         const categories = [...new Set(diseases.map(d=>d.category))];
@@ -453,8 +367,8 @@
     }
 
     function renderHistory() {
-        if(historyData.length===0){ mainContent.innerHTML=`<div class="card">📭 Belum ada riwayat. Lakukan deteksi gejala atau scan gambar.</div>`; return; }
-        const list = historyData.map(h=>`<div class="history-row"><div><b>${h.disease}</b><br><small>${h.date}</small></div><div>${h.confidence}%</div><div>${h.method}</div></div>`).join('');
+        if(historyData.length===0){ mainContent.innerHTML=`<div class="card">📭 Belum ada riwayat. Lakukan deteksi gejala.</div>`; return; }
+        const list = historyData.map(h=>`<div class="history-row"><div><b>${h.disease}</b><br><small>${h.date}</small></div><div>${h.method}</div></div>`).join('');
         mainContent.innerHTML = `
             <div class="card">
                 <div class="card-title"><i class="fas fa-history"></i> Semua Riwayat</div>
@@ -465,12 +379,12 @@
                 </div>
             </div>
         `;
-        document.getElementById('clearHistoryBtn')?.addEventListener('click',()=>{ if(confirm('Hapus riwayat lokal?')){ localStorage.removeItem('dermascan_history'); historyData=[]; renderHistory(); } });
+        document.getElementById('clearHistoryBtn')?.addEventListener('click',()=>{ if(confirm('Hapus riwayat lokal?')){ localStorage.removeItem('skincheck_history'); historyData=[]; renderHistory(); } });
         document.getElementById('exportHistoryBtn')?.addEventListener('click', () => {
-            let content = "Riwayat DermaScan\n";
-            historyData.forEach(h=>{ content += `${h.date}, ${h.disease}, ${h.confidence}%, ${h.method}\n`; });
+            let content = "Riwayat SkinCheck\n";
+            historyData.forEach(h=>{ content += `${h.date}, ${h.disease}, ${h.method}\n`; });
             const blob = new Blob([content], {type: "text/plain"});
-            const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "dermascan_history.txt"; a.click();
+            const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "skincheck_history.txt"; a.click();
         });
     }
 
@@ -506,8 +420,7 @@
                     <div class="form-group"><label>Severity</label><input name="severity" value="${disease.severity}"></div>
                     <div class="form-group"><label>Icon Class</label><input name="iconClass" value="${disease.iconClass}"></div>
                     <div class="form-group"><label>Icon Color</label><input name="iconColor" value="${disease.iconColor}"></div>
-                    <div class="form-group"><label>Color Match (JSON)</label><textarea name="colorMatch">${JSON.stringify(disease.colorMatch)}</textarea></div>
-                    <div class="form-group"><label>Symptoms (JSON)</label><textarea name="symptoms">${JSON.stringify(disease.symptoms)}</textarea></div>
+                    <div class="form-group"><label>Symptoms (JSON array)</label><textarea name="symptoms">${JSON.stringify(disease.symptoms)}</textarea></div>
                     <div class="form-group"><label>Solution</label><textarea name="solution">${disease.solution}</textarea></div>
                     <div class="form-group"><label>Prevention</label><textarea name="prevention">${disease.prevention}</textarea></div>
                     <div class="form-group"><label>Warn Dokter</label><textarea name="warnDokter">${disease.warnDokter}</textarea></div>
@@ -526,7 +439,7 @@
             const formData = new FormData(e.target);
             const updated = {};
             for(let [key, val] of formData.entries()) {
-                if(key === 'symptoms' || key === 'colorMatch') {
+                if(key === 'symptoms') {
                     try { updated[key] = JSON.parse(val); } catch(e) { updated[key] = []; }
                 } else {
                     updated[key] = val;
@@ -552,7 +465,6 @@
                     <div class="form-group"><label>Severity</label><input name="severity"></div>
                     <div class="form-group"><label>Icon Class</label><input name="iconClass" value="fas fa-circle-dot"></div>
                     <div class="form-group"><label>Icon Color</label><input name="iconColor" value="#1a6fd4"></div>
-                    <div class="form-group"><label>Color Match (JSON)</label><textarea name="colorMatch">["#CCCCCC"]</textarea></div>
                     <div class="form-group"><label>Symptoms (JSON)</label><textarea name="symptoms">["Gejala 1","Gejala 2"]</textarea></div>
                     <div class="form-group"><label>Solution</label><textarea name="solution"></textarea></div>
                     <div class="form-group"><label>Prevention</label><textarea name="prevention"></textarea></div>
@@ -572,7 +484,7 @@
             const formData = new FormData(e.target);
             const newData = { id: newId };
             for(let [key, val] of formData.entries()) {
-                if(key === 'symptoms' || key === 'colorMatch') {
+                if(key === 'symptoms') {
                     try { newData[key] = JSON.parse(val); } catch(e) { newData[key] = []; }
                 } else {
                     newData[key] = val;
@@ -582,6 +494,69 @@
             modal.remove();
             renderAdminTable();
         };
+    };
+
+    // ---------- MODAL DETAIL PENYAKIT (FOKUS GEJALA & DAMPAK) ----------
+    window.openDiseaseModal = (d) => {
+        const modalDiv = document.createElement('div'); 
+        modalDiv.className = 'modal-overlay'; // gunakan class dari CSS
+        // style dasar overlay
+        modalDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:2000;';
+        modalDiv.innerHTML = `
+            <div style="background:white; border-radius:28px; max-width:600px; width:90%; max-height:90vh; overflow-y:auto; padding:1.8rem; box-shadow:0 20px 40px rgba(0,0,0,0.2); position:relative;">
+                <button class="modal-close" style="position:absolute; top:12px; right:16px; background:none; border:none; font-size:1.8rem; cursor:pointer; color:#888;">&times;</button>
+                
+                <div class="detail-header">
+                    <div class="icon-big"><i class="${d.iconClass}" style="color:${d.iconColor};"></i></div>
+                    <div>
+                        <h2 style="margin:0; font-size:1.5rem;">${d.name}</h2>
+                        <p style="margin:0; color:var(--muted); font-style:italic; font-size:0.9rem;">${d.latin}</p>
+                    </div>
+                </div>
+                <div class="detail-meta">
+                    <span class="badge">${d.category}</span>
+                    <span class="badge severity">${d.severity}</span>
+                </div>
+
+                <!-- FOKUS: GEJALA (DITONJOLKAN) -->
+                <div class="symptom-list">
+                    <strong style="display:block; margin-bottom:4px;"><i class="fas fa-list-ul"></i> Gejala Awal</strong>
+                    <ul>
+                        ${d.symptoms.map(s => `<li><i class="fas fa-check-circle" style="color:${d.iconColor};"></i> ${s}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <!-- DAMPAK SELANJUTNYA (Gabungan dampak jangka panjang + komplikasi) -->
+                <div class="detail-section">
+                    <strong><i class="fas fa-forward"></i> Dampak Selanjutnya</strong>
+                    <div class="info-box">
+                        <p><strong>Dampak jangka panjang:</strong> ${d.longTermImpact}</p>
+                        <p style="margin-top:6px;"><strong>Komplikasi:</strong> ${d.complications}</p>
+                    </div>
+                </div>
+
+                <!-- Informasi tambahan (Penanganan & Perhatian) - tetap disertakan tapi tidak dominan -->
+                <div style="display:flex; flex-wrap:wrap; gap:12px; margin-top:12px;">
+                    <div style="flex:1; min-width:150px; background:var(--green-bg); border-radius:16px; padding:12px;">
+                        <strong style="display:block; font-size:0.8rem;">💊 Penanganan</strong>
+                        <p style="font-size:0.85rem; margin:4px 0 0;">${d.solution}</p>
+                    </div>
+                    <div style="flex:1; min-width:150px; background:#fef3c7; border-radius:16px; padding:12px;">
+                        <strong style="display:block; font-size:0.8rem;">⚠️ Perhatian</strong>
+                        <p style="font-size:0.85rem; margin:4px 0 0;">${d.warnDokter}</p>
+                    </div>
+                </div>
+
+                <button onclick="this.closest('.modal-overlay').remove()" class="btn" style="margin-top:16px; width:100%; justify-content:center;">
+                    Tutup
+                </button>
+            </div>
+        `;
+        document.body.appendChild(modalDiv);
+        // event close
+        modalDiv.querySelector('.modal-close').onclick = () => modalDiv.remove();
+        // klik overlay juga tutup
+        modalDiv.onclick = e => { if(e.target === modalDiv) modalDiv.remove(); };
     };
 
     // ---------- Navigasi & Inisialisasi ----------
@@ -614,29 +589,6 @@
             adminPanelDiv.style.display = 'block';
             renderAdminTable();
         } else { alert("Password salah!"); }
-    };
-
-    window.openDiseaseModal = (d) => {
-        const modalDiv = document.createElement('div'); modalDiv.className='modal-overlay';
-        modalDiv.innerHTML = `
-            <div class="modal-content">
-                <button class="modal-close" style="float:right; font-size:24px; background:none; border:none;">&times;</button>
-                <div class="modal-image" style="text-align:center; background:var(--blue-light); padding:1rem; border-radius:24px;"><i class="${d.iconClass}" style="color:${d.iconColor}; font-size:4rem;"></i></div>
-                <h2>${d.name} (${d.latin})</h2>
-                <div><span class="badge-category">${d.category}</span> <span class="badge-severity">${d.severity}</span></div>
-                <p><strong>Deskripsi:</strong> ${d.description}</p>
-                <p><strong>Penyebab:</strong> ${d.cause}</p>
-                <p><strong>Gejala:</strong> ${d.symptoms.join(', ')}</p>
-                <p><strong>Dampak jangka panjang:</strong> ${d.longTermImpact}</p>
-                <p><strong>Komplikasi:</strong> ${d.complications}</p>
-                <p><strong>Penanganan:</strong> ${d.solution}</p>
-                <p><strong>Pencegahan:</strong> ${d.prevention}</p>
-                <p><strong>Perhatian:</strong> ${d.warnDokter}</p>
-            </div>
-        `;
-        document.body.appendChild(modalDiv);
-        modalDiv.querySelector('.modal-close').onclick = () => modalDiv.remove();
-        modalDiv.onclick = e => { if(e.target === modalDiv) modalDiv.remove(); };
     };
 
     // Start aplikasi
